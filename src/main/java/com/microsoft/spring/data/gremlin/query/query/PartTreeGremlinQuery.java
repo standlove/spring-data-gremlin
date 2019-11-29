@@ -37,4 +37,9 @@ public class PartTreeGremlinQuery extends AbstractGremlinQuery {
 
         return creator.createQuery();
     }
+
+    @Override
+    protected boolean isCountQuery() {
+        return this.partTree.isCountProjection();
+    }
 }

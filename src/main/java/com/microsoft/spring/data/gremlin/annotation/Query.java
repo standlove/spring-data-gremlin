@@ -5,23 +5,24 @@
  */
 package com.microsoft.spring.data.gremlin.annotation;
 
-import org.springframework.data.annotation.Persistent;
-import org.springframework.data.annotation.Reference;
-
+import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Specifies the field as EdgeSet of graph.
+ * The annotation to declare custom queries directly on repository methods.
+ *
+ * @author xxcxy
  */
-@Persistent
-@Inherited
+@Documented
+@Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.FIELD)
-@Reference
-public @interface EdgeSet {
-}
+public @interface Query {
 
+    /**
+     * Defines the Gremlin query to be executed when the annotated method` is called.
+     */
+    String value() default "";
+}

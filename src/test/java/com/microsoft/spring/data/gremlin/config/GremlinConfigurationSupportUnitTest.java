@@ -5,7 +5,26 @@
  */
 package com.microsoft.spring.data.gremlin.config;
 
-import com.microsoft.spring.data.gremlin.common.domain.*;
+import com.microsoft.spring.data.gremlin.common.domain.AdvancedUser;
+import com.microsoft.spring.data.gremlin.common.domain.Book;
+import com.microsoft.spring.data.gremlin.common.domain.BookReference;
+import com.microsoft.spring.data.gremlin.common.domain.Dependency;
+import com.microsoft.spring.data.gremlin.common.domain.Group;
+import com.microsoft.spring.data.gremlin.common.domain.GroupOwner;
+import com.microsoft.spring.data.gremlin.common.domain.InvalidDependency;
+import com.microsoft.spring.data.gremlin.common.domain.Library;
+import com.microsoft.spring.data.gremlin.common.domain.Master;
+import com.microsoft.spring.data.gremlin.common.domain.Neighbor;
+import com.microsoft.spring.data.gremlin.common.domain.Network;
+import com.microsoft.spring.data.gremlin.common.domain.Orange;
+import com.microsoft.spring.data.gremlin.common.domain.Person;
+import com.microsoft.spring.data.gremlin.common.domain.Project;
+import com.microsoft.spring.data.gremlin.common.domain.Relationship;
+import com.microsoft.spring.data.gremlin.common.domain.Roadmap;
+import com.microsoft.spring.data.gremlin.common.domain.Service;
+import com.microsoft.spring.data.gremlin.common.domain.SimpleDependency;
+import com.microsoft.spring.data.gremlin.common.domain.Student;
+import com.microsoft.spring.data.gremlin.common.domain.UserDomain;
 import lombok.NoArgsConstructor;
 import lombok.SneakyThrows;
 import org.junit.Assert;
@@ -43,6 +62,12 @@ public class GremlinConfigurationSupportUnitTest {
     }
 
     @Test
+    public void testPersistentEntities() throws ClassNotFoundException {
+        final TestPersistentEntities tpe = new TestPersistentEntities();
+        Assert.assertEquals(tpe.gremlinMappingContext().getPersistentEntities().size(), 20);
+    }
+
+    @Test
     @SneakyThrows
     public void testScanEntity() {
         final Set<Class<?>> entities = this.config.scanEntities(TEST_DOMAIN_PACKAGE_NAME);
@@ -70,5 +95,13 @@ public class GremlinConfigurationSupportUnitTest {
     @NoArgsConstructor
     private class TestConfig extends GremlinConfigurationSupport {
 
+    }
+
+    @NoArgsConstructor
+    private class TestPersistentEntities extends GremlinConfigurationSupport {
+        @Override
+        protected Collection<String> getMappingBasePackages() {
+            return Arrays.asList(TEST_DOMAIN_PACKAGE_NAME);
+        }
     }
 }

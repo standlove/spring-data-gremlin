@@ -8,9 +8,14 @@ package com.microsoft.spring.data.gremlin.query.query;
 import com.microsoft.spring.data.gremlin.query.GremlinOperations;
 import com.microsoft.spring.data.gremlin.query.paramerter.GremlinParameterAccessor;
 import com.microsoft.spring.data.gremlin.query.paramerter.GremlinParametersParameterAccessor;
+import org.springframework.data.repository.query.ParameterAccessor;
+import org.springframework.data.repository.query.ParametersParameterAccessor;
+import org.springframework.data.repository.query.QueryMethod;
 import org.springframework.data.repository.query.RepositoryQuery;
 import org.springframework.data.repository.query.ResultProcessor;
 import org.springframework.lang.NonNull;
+
+import java.util.List;
 
 public abstract class AbstractGremlinQuery implements RepositoryQuery {
 
@@ -36,9 +41,29 @@ public abstract class AbstractGremlinQuery implements RepositoryQuery {
         final GremlinQuery query = this.createQuery(accessor);
         final ResultProcessor processor = method.getResultProcessor().withDynamicProjection(accessor);
         final GremlinQueryExecution execution = this.getExecution();
-
-        return execution.execute(query, processor.getReturnedType().getDomainType());
+        final Object result = execution.execute(query, processor.getReturnedType().getDomainType());
+        return processResult(result, method, parameters);
     }
+
+    protected Object processResult(@NonNull Object result, @NonNull QueryMethod queryMethod,
+                                   @NonNull Object[] parameters) {
+        final ParameterAccessor accessor = new ParametersParameterAccessor(queryMethod.getParameters(), parameters);
+        final ResultProcessor processor = queryMethod.getResultProcessor().withDynamicProjection(accessor);
+        if (queryMethod.isCollectionQuery() || queryMethod.isStreamQuery()) {
+            return processor.processResult(result);
+        } else if (isCountQuery()) {
+            if (result == null) {
+                return 0;
+            }
+            return ((List) result).size();
+        } else if (result == null || ((List) result).isEmpty()) {
+            return null;
+        } else {
+            return processor.processResult(((List) result).get(0));
+        }
+    }
+
+    protected abstract boolean isCountQuery();
 
     @Override
     @NonNull

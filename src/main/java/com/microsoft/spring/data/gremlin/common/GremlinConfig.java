@@ -5,17 +5,17 @@
  */
 package com.microsoft.spring.data.gremlin.common;
 
-import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
+import org.apache.tinkerpop.gremlin.driver.MessageSerializer;
 import org.apache.tinkerpop.gremlin.driver.ser.Serializers;
 
 @Getter
 @Setter
+@AllArgsConstructor
 @Builder(builderMethodName = "defaultBuilder")
-@AllArgsConstructor(access = AccessLevel.PUBLIC)
 public class GremlinConfig {
     private String endpoint;
 
@@ -29,10 +29,22 @@ public class GremlinConfig {
 
     private boolean telemetryAllowed;
 
-    private String serializer;
-    
+    private MessageSerializer serializer;
+
     private int maxContentLength;
-    
+
+    public GremlinConfig(final String endpoint, final int port, final String username,
+                         final String password, final boolean sslEnabled, final boolean telemetryAllowed,
+                         final String serializer, final int maxContentLength) {
+        this.endpoint = endpoint;
+        this.port = port;
+        this.username = username;
+        this.password = password;
+        this.sslEnabled = sslEnabled;
+        this.telemetryAllowed = telemetryAllowed;
+        this.serializer = Serializers.valueOf(serializer).simpleInstance();
+        this.maxContentLength = maxContentLength;
+    }
 
     public static GremlinConfigBuilder builder(String endpoint, String username, String password) {
         return defaultBuilder()
@@ -41,7 +53,7 @@ public class GremlinConfig {
                 .password(password)
                 .port(Constants.DEFAULT_ENDPOINT_PORT)
                 .sslEnabled(true)
-                .serializer(Serializers.GRAPHSON.toString())
+                .serializer(Serializers.GRAPHSON.simpleInstance())
                 .telemetryAllowed(true);
     }
 }

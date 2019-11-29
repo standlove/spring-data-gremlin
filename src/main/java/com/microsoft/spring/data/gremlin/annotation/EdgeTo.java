@@ -6,6 +6,7 @@
 package com.microsoft.spring.data.gremlin.annotation;
 
 import org.springframework.data.annotation.Persistent;
+import org.springframework.data.annotation.Reference;
 
 import java.lang.annotation.*;
 
@@ -16,5 +17,6 @@ import java.lang.annotation.*;
 @Inherited
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
+@Reference
 public @interface EdgeTo {
 }

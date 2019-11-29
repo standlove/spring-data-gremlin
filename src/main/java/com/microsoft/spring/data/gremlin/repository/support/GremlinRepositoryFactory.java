@@ -5,9 +5,11 @@
  */
 package com.microsoft.spring.data.gremlin.repository.support;
 
+import com.microsoft.spring.data.gremlin.annotation.Query;
 import com.microsoft.spring.data.gremlin.query.GremlinOperations;
 import com.microsoft.spring.data.gremlin.query.query.GremlinQueryMethod;
 import com.microsoft.spring.data.gremlin.query.query.PartTreeGremlinQuery;
+import com.microsoft.spring.data.gremlin.query.query.StringGremlinQuery;
 import org.springframework.context.ApplicationContext;
 import org.springframework.data.projection.ProjectionFactory;
 import org.springframework.data.repository.core.EntityInformation;
@@ -74,7 +76,13 @@ public class GremlinRepositoryFactory extends RepositoryFactorySupport {
             Assert.notNull(queryMethod, "queryMethod should not be null");
             Assert.notNull(this.operations, "operations should not be null");
 
-            return new PartTreeGremlinQuery(queryMethod, this.operations);
+            final Query query = method.getAnnotation(Query.class);
+
+            if (query == null) {
+                return new PartTreeGremlinQuery(queryMethod, this.operations);
+            } else {
+                return new StringGremlinQuery(queryMethod, this.operations, query);
+            }
         }
     }
 }

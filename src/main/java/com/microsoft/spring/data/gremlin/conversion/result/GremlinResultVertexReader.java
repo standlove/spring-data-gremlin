@@ -11,13 +11,19 @@ import com.microsoft.spring.data.gremlin.conversion.source.GremlinSourceVertex;
 import com.microsoft.spring.data.gremlin.exception.GremlinUnexpectedSourceTypeException;
 import lombok.NoArgsConstructor;
 import org.apache.tinkerpop.gremlin.driver.Result;
+import org.apache.tinkerpop.gremlin.structure.util.detached.DetachedElement;
 import org.springframework.lang.NonNull;
 import org.springframework.util.Assert;
 
 import java.util.List;
 import java.util.Map;
 
-import static com.microsoft.spring.data.gremlin.common.Constants.*;
+import static com.microsoft.spring.data.gremlin.common.Constants.GREMLIN_PROPERTY_CLASSNAME;
+import static com.microsoft.spring.data.gremlin.common.Constants.PROPERTY_ID;
+import static com.microsoft.spring.data.gremlin.common.Constants.PROPERTY_LABEL;
+import static com.microsoft.spring.data.gremlin.common.Constants.PROPERTY_PROPERTIES;
+import static com.microsoft.spring.data.gremlin.common.Constants.PROPERTY_TYPE;
+import static com.microsoft.spring.data.gremlin.common.Constants.RESULT_TYPE_VERTEX;
 
 @NoArgsConstructor
 public class GremlinResultVertexReader extends AbstractGremlinResultReader implements GremlinResultsReader {
@@ -48,18 +54,23 @@ public class GremlinResultVertexReader extends AbstractGremlinResultReader imple
         if (!(source instanceof GremlinSourceVertex)) {
             throw new GremlinUnexpectedSourceTypeException("Should be instance of GremlinSourceVertex");
         }
-
-        validate(results, source);
-
-        final Map<String, Object> map = (Map<String, Object>) results.get(0).getObject();
-        final Map<String, Object> properties = (Map<String, Object>) map.get(PROPERTY_PROPERTIES);
-
-        super.readResultProperties(properties, source);
-
         final String className = source.getProperties().get(GREMLIN_PROPERTY_CLASSNAME).toString();
+        final Object resultObject = results.get(0).getObject();
 
-        source.setIdField(GremlinUtils.getIdField(GremlinUtils.toEntityClass(className)));
-        source.setId(map.get(PROPERTY_ID));
-        source.setLabel(map.get(PROPERTY_LABEL).toString());
+        if (resultObject instanceof DetachedElement) {
+            final DetachedElement result = (DetachedElement) resultObject;
+            result.keys().forEach(key -> source.setProperty(key, result.value(key)));
+            source.setIdField(GremlinUtils.getIdField(GremlinUtils.toEntityClass(className)));
+            source.setId(result.id());
+            source.setLabel(result.label());
+        } else {
+            validate(results, source);
+            final Map<String, Object> map = (Map<String, Object>) resultObject;
+            final Map<String, Object> properties = (Map<String, Object>) map.get(PROPERTY_PROPERTIES);
+            super.readResultProperties(properties, source);
+            source.setIdField(GremlinUtils.getIdField(GremlinUtils.toEntityClass(className)));
+            source.setId(map.get(PROPERTY_ID));
+            source.setLabel(map.get(PROPERTY_LABEL).toString());
+        }
     }
 }

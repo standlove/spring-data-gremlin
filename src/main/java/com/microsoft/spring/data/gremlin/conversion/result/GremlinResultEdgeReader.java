@@ -12,13 +12,21 @@ import com.microsoft.spring.data.gremlin.exception.GremlinUnexpectedSourceTypeEx
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 import org.apache.tinkerpop.gremlin.driver.Result;
+import org.apache.tinkerpop.gremlin.structure.util.detached.DetachedEdge;
 import org.springframework.lang.Nullable;
 import org.springframework.util.Assert;
 
 import java.util.List;
 import java.util.Map;
 
-import static com.microsoft.spring.data.gremlin.common.Constants.*;
+import static com.microsoft.spring.data.gremlin.common.Constants.GREMLIN_PROPERTY_CLASSNAME;
+import static com.microsoft.spring.data.gremlin.common.Constants.PROPERTY_ID;
+import static com.microsoft.spring.data.gremlin.common.Constants.PROPERTY_INV;
+import static com.microsoft.spring.data.gremlin.common.Constants.PROPERTY_LABEL;
+import static com.microsoft.spring.data.gremlin.common.Constants.PROPERTY_OUTV;
+import static com.microsoft.spring.data.gremlin.common.Constants.PROPERTY_PROPERTIES;
+import static com.microsoft.spring.data.gremlin.common.Constants.PROPERTY_TYPE;
+import static com.microsoft.spring.data.gremlin.common.Constants.RESULT_TYPE_EDGE;
 
 @NoArgsConstructor
 public class GremlinResultEdgeReader extends AbstractGremlinResultReader implements GremlinResultsReader {
@@ -57,19 +65,27 @@ public class GremlinResultEdgeReader extends AbstractGremlinResultReader impleme
             throw new GremlinUnexpectedSourceTypeException("Should be instance of GremlinSourceEdge");
         }
 
-        validate(results, source);
-
         final GremlinSourceEdge sourceEdge = (GremlinSourceEdge) source;
-        final Map<String, Object> map = (Map<String, Object>) results.get(0).getObject();
-
-        this.readProperties(source, (Map) map.get(PROPERTY_PROPERTIES));
-
         final String className = source.getProperties().get(GREMLIN_PROPERTY_CLASSNAME).toString();
 
-        sourceEdge.setIdField(GremlinUtils.getIdField(GremlinUtils.toEntityClass(className)));
-        sourceEdge.setId(map.get(PROPERTY_ID));
-        sourceEdge.setLabel(map.get(PROPERTY_LABEL).toString());
-        sourceEdge.setVertexIdFrom(map.get(PROPERTY_OUTV));
-        sourceEdge.setVertexIdTo(map.get(PROPERTY_INV));
+        final Object resultObject = results.get(0).getObject();
+        if (resultObject instanceof DetachedEdge) {
+            final DetachedEdge result = (DetachedEdge) resultObject;
+            result.keys().forEach(key -> source.setProperty(key, result.value(key)));
+            sourceEdge.setIdField(GremlinUtils.getIdField(GremlinUtils.toEntityClass(className)));
+            sourceEdge.setId(result.id());
+            sourceEdge.setLabel(result.label());
+            sourceEdge.setVertexIdFrom(result.outVertex().id().toString());
+            sourceEdge.setVertexIdTo(result.inVertex().id().toString());
+        } else {
+            validate(results, source);
+            final Map<String, Object> map = (Map<String, Object>) resultObject;
+            this.readProperties(source, (Map) map.get(PROPERTY_PROPERTIES));
+            sourceEdge.setIdField(GremlinUtils.getIdField(GremlinUtils.toEntityClass(className)));
+            sourceEdge.setId(map.get(PROPERTY_ID));
+            sourceEdge.setLabel(map.get(PROPERTY_LABEL).toString());
+            sourceEdge.setVertexIdFrom(map.get(PROPERTY_OUTV));
+            sourceEdge.setVertexIdTo(map.get(PROPERTY_INV));
+        }
     }
 }

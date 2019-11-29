@@ -32,8 +32,10 @@ import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.tinkerpop.gremlin.driver.Client;
 import org.apache.tinkerpop.gremlin.driver.Result;
 import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.ObjectFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.data.auditing.IsNewAwareAuditingHandler;
 import org.springframework.data.mapping.PersistentProperty;
 import org.springframework.data.mapping.model.ConvertingPropertyAccessor;
 import org.springframework.lang.NonNull;
@@ -56,9 +58,16 @@ public class GremlinTemplate implements GremlinOperations, ApplicationContextAwa
     private Client gremlinClient;
     private ApplicationContext context;
 
+    private ObjectFactory<? extends IsNewAwareAuditingHandler> auditingHandlerFactory;
+
     public GremlinTemplate(@NonNull GremlinFactory factory, @NonNull MappingGremlinConverter converter) {
         this.factory = factory;
         this.mappingConverter = converter;
+    }
+
+    public void setAuditingHandlerFactory(@NonNull ObjectFactory<? extends IsNewAwareAuditingHandler>
+                                                  auditingHandlerFactory) {
+        this.auditingHandlerFactory = auditingHandlerFactory;
     }
 
     @Override
@@ -125,9 +134,16 @@ public class GremlinTemplate implements GremlinOperations, ApplicationContextAwa
     }
 
     private <T> List<Result> insertInternal(@NonNull T object, @NonNull GremlinSource<T> source) {
+        markAudited(object);
         this.mappingConverter.write(object, source);
 
         return executeQuery(source.getGremlinScriptLiteral().generateInsertScript(source));
+    }
+
+    private <T> void markAudited(@NonNull T object) {
+        if (auditingHandlerFactory != null) {
+            auditingHandlerFactory.getObject().markAudited(object);
+        }
     }
 
     @Override
@@ -243,6 +259,7 @@ public class GremlinTemplate implements GremlinOperations, ApplicationContextAwa
     }
 
     private <T> T updateInternal(@NonNull T object, @NonNull GremlinSource<T> source) {
+        markAudited(object);
         this.mappingConverter.write(object, source);
 
         final List<String> queryList = source.getGremlinScriptLiteral().generateUpdateScript(source);
@@ -271,7 +288,8 @@ public class GremlinTemplate implements GremlinOperations, ApplicationContextAwa
 
         if (entityGraph && this.isEmptyGraph(source)) {
             return insert(object, source);
-        } else if (!entityGraph && (!optional.isPresent() || notExistsById(optional.get(), source))) {
+        } else if (!entityGraph && (!optional.isPresent() || (notExistsById(optional.get(), source)
+                && !source.getIdField().isAnnotationPresent(GeneratedValue.class)))) {
             return insert(object, source);
         } else {
             return updateInternal(object, source);
@@ -373,13 +391,15 @@ public class GremlinTemplate implements GremlinOperations, ApplicationContextAwa
     @Override
     public <T> List<T> find(@NonNull GremlinQuery query, @NonNull GremlinSource<T> source) {
         final QueryScriptGenerator generator = new QueryFindScriptGenerator(source);
-        final List<String> queryList = generator.generate(query);
-        final List<Result> results = this.executeQuery(queryList);
+        return findByStringQuery(generator.generate(query), source);
+    }
 
+    @Override
+    public <T> List<T> findByStringQuery(final List<String> query, final GremlinSource<T> source) {
+        final List<Result> results = this.executeQuery(query);
         if (results.isEmpty()) {
             return Collections.emptyList();
         }
-
         return this.recoverDomainList(source, results);
     }
 }

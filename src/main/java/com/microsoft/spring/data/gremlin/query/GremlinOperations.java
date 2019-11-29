@@ -49,5 +49,15 @@ public interface GremlinOperations {
 
     <T> List<T> find(GremlinQuery query, GremlinSource<T> source);
 
+    /**
+     * Executes string gremlin.
+     *
+     * @param query  list of string query
+     * @param source gremlin srouce
+     * @param <T>
+     * @return list of results
+     */
+    <T> List<T> findByStringQuery(List<String> query, GremlinSource<T> source);
+
     MappingGremlinConverter getMappingConverter();
 }

@@ -60,12 +60,12 @@ public abstract class GremlinConfigurationSupport {
         return entitySet;
     }
 
-    @Bean
+    @Bean("gremlinMappingContext")
     public GremlinMappingContext gremlinMappingContext() throws ClassNotFoundException {
         final GremlinMappingContext context = new GremlinMappingContext();
 
         context.setInitialEntitySet(this.getInitialEntitySet());
-
+        context.initialize();
         return context;
     }
 
